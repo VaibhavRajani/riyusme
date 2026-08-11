@@ -1,60 +1,47 @@
-# RiyuSme — ATS Resume Tailor
+# RiyuSme
 
-Tailor a Word (`.docx`) resume to a pasted job description using Claude — preserving fonts, spacing, colors, and one-page layout.
+Tailor Riya’s Word resume to a job description with Claude — **format preserved**, **one page**, finance/ATS aware.
+
+**Live:** [riyusme.vercel.app](https://riyusme.vercel.app) · **Repo:** [VaibhavRajani/riyusme](https://github.com/VaibhavRajani/riyusme)
+
+## Features
+
+- Default resume loads from `public/defaults/riya-resume.docx` (replace via upload anytime)
+- Paste JD + optional notes → Claude rewrites experience/projects toward the role
+- One-page lock: rewrites must be **same length or shorter** (no extra wrapped lines)
+- Diff review before download; short **application blurb** (why company / how I’ll contribute)
+- Does not change company names, titles, dates, or contact info; keeps scope realistic to the baseline
 
 ## Stack
 
-- Next.js (App Router) + TypeScript + Tailwind CSS
-- Anthropic Claude (Sonnet) for finance-aware, ATS-oriented rewrites
-- JSZip for surgical DOCX text edits (no format rebuild)
+Next.js (App Router) · TypeScript · Tailwind · Anthropic Claude Sonnet 5 · JSZip (in-place DOCX edits)
 
-## Setup
-
-1. Install dependencies:
+## Local setup
 
 ```bash
 npm install
+cp .env.example .env.local   # set ANTHROPIC_API_KEY
+npm run dev                  # http://localhost:3000
 ```
 
-2. Copy env and add your [Anthropic API key](https://console.anthropic.com/):
+Default resume path: `public/defaults/riya-resume.docx` (must be `.docx`, not `.doc`).
 
-```bash
-cp .env.example .env.local
-```
+## Deploy (Vercel)
 
-3. Run locally:
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Deploy on Vercel
-
-1. Push this repo to GitHub.
-2. Import the project in [Vercel](https://vercel.com/new).
-3. Add environment variable `ANTHROPIC_API_KEY`.
-4. Deploy.
-
-Hobby plan: rewrite routes may take 30–60s; `maxDuration` is set on API routes.
+Repo is linked to Vercel. Set `ANTHROPIC_API_KEY` in project env (Production + Preview). Pushes to `master` deploy automatically.
 
 ## How it works
 
-1. **Parse** — extracts resume paragraphs/bullets from `word/document.xml`.
-2. **Analyze** — pulls ATS keywords / must-haves from the JD (finance-aware).
-3. **Rewrite** — Claude returns per-line edits. Experience and project bullets may be reshaped as wholes toward the JD. Rules enforce:
-   - no company / title / date / contact changes
-   - resume is the seniority/impact baseline (no fresher → “led 100 people / +$10M ARR” leaps)
-   - ±20% word-count lock (retries once on violations)
-   - skill reframes when supported by resume or **Additional notes**
-4. **Export** — applies approved text into the original DOCX runs so formatting stays intact.
+1. **Parse** — read paragraphs from `word/document.xml`
+2. **Analyze** — JD keywords / must-haves
+3. **Rewrite** — per-block edits + cover blurb; length lock + one retry
+4. **Export** — patch approved text into the original DOCX runs
 
 ## Scripts
 
-| Command       | Description        |
-|---------------|--------------------|
-| `npm run dev` | Local development  |
-| `npm run build` | Production build |
-| `npm run start` | Serve build      |
-| `npm run lint`  | ESLint           |
+```bash
+npm run dev          # local
+npm run build        # production build
+npm run smoke:docx   # DOCX parse/apply smoke test
+npm run lint
+```
