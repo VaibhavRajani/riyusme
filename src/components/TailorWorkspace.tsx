@@ -11,6 +11,7 @@ import {
   DEFAULT_RESUME_FILENAME,
   loadDefaultResumeFile,
 } from "@/lib/defaultResume";
+import { tailoredResumeFilename } from "@/lib/filename";
 import type { ResumeBlock, ResumeChange } from "@/lib/docx/types";
 
 type Coverage = { covered: string[]; missing: string[]; score: number };
@@ -25,6 +26,7 @@ type TailorState = {
   after: Coverage;
   roleFamily?: string;
   mustHaves?: string[];
+  companyName?: string;
 };
 
 export function TailorWorkspace() {
@@ -152,6 +154,7 @@ export function TailorWorkspace() {
         after,
         roleFamily: analyzeJson.roleFamily,
         mustHaves: analyzeJson.mustHaves,
+        companyName: analyzeJson.companyName || "",
       });
       setSelected(new Set(changes.map((c) => c.id)));
     } catch (e) {
@@ -191,6 +194,7 @@ export function TailorWorkspace() {
       form.append("file", file);
       form.append("changes", JSON.stringify(selectedChanges));
       form.append("format", format);
+      form.append("companyName", result?.companyName || "");
       const res = await fetch("/api/export", { method: "POST", body: form });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -200,8 +204,11 @@ export function TailorWorkspace() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const base = file.name.replace(/\.docx$/i, "");
-      a.download = `${base}-tailored.${format === "pdf" ? "pdf" : "docx"}`;
+      a.download = tailoredResumeFilename(
+        file.name,
+        result?.companyName,
+        format
+      );
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {

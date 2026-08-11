@@ -98,9 +98,11 @@ Return JSON:
   "mustHaves": ["...", "..."],
   "themes": ["...", "..."],
   "seniority": "intern|junior|mid|senior|lead|unknown",
-  "roleFamily": "short label e.g. FP&A Analyst"
+  "roleFamily": "short label e.g. FP&A Analyst",
+  "companyName": "hiring company short name e.g. Goldman Sachs, JPMorgan, Stripe"
 }
 
 keywords: 12–25 ATS tokens (tools, skills, domain terms).
-mustHaves: top 5–8 non-negotiables from the JD.`;
+mustHaves: top 5–8 non-negotiables from the JD.
+companyName: the employer/organization posting the role (not the job title). If unclear, use "".`;
 }

@@ -8,6 +8,7 @@ const AnalyzeSchema = z.object({
   themes: z.array(z.string()).default([]),
   seniority: z.string().default("unknown"),
   roleFamily: z.string().default("Finance"),
+  companyName: z.string().default(""),
 });
 
 export type AnalyzeResult = z.infer<typeof AnalyzeSchema>;

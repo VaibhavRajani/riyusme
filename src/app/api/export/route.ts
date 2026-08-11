@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { applyChangesToDocx } from "@/lib/docx/apply";
 import { docxToPdf } from "@/lib/docx/toPdf";
 import { isLayoutSafe } from "@/lib/docx/wordCount";
+import { tailoredResumeFilename } from "@/lib/filename";
 import type { ResumeChange } from "@/lib/docx/types";
 
 export const runtime = "nodejs";
@@ -13,6 +14,9 @@ export async function POST(req: NextRequest) {
     const file = form.get("file");
     const changesRaw = form.get("changes");
     const formatRaw = form.get("format");
+    const companyRaw = form.get("companyName");
+    const companyName =
+      typeof companyRaw === "string" ? companyRaw.trim() : "";
     const format =
       typeof formatRaw === "string" && formatRaw.toLowerCase() === "pdf"
         ? "pdf"
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const tailored = await applyChangesToDocx(buffer, safe);
-    const base = file.name.replace(/\.docx$/i, "") || "resume";
+    const filename = tailoredResumeFilename(file.name, companyName, format);
 
     if (format === "pdf") {
       const pdf = await docxToPdf(Buffer.from(tailored));
@@ -60,7 +64,7 @@ export async function POST(req: NextRequest) {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${base}-tailored.pdf"`,
+          "Content-Disposition": `attachment; filename="${filename}"`,
         },
       });
     }
@@ -70,7 +74,7 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="${base}-tailored.docx"`,
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
   } catch (err) {
