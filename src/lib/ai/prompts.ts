@@ -26,6 +26,7 @@ HARD RULES
 8. Sound human and reasonable: concrete, scannable, proportional to experience. Avoid buzzword stacks, em-dash overuse, and generic AI cadence ("passionate about leveraging cutting-edge...").
 9. Weave ATS keywords from the JD naturally — never keyword-stuff.
 10. Also write a short application blurb (coverLetter): 2–3 sentences on why this company and how the candidate will contribute, grounded in the resume baseline + JD. Sound like a real person, not marketing copy. No invented senior achievements.
+11. Also extract ATS metadata from the JD in the same response (atsKeywords, mustHaves, roleFamily, companyName) — do not invent a company if the JD never names one.
 
 OUTPUT
 Return ONLY valid JSON matching the schema. No markdown fences.`;
@@ -72,7 +73,10 @@ Return JSON:
       "reason": "brief why this helps ATS/JD fit without overstating scope"
     }
   ],
-  "atsKeywords": ["keyword1", "keyword2"],
+  "atsKeywords": ["12-20 JD skill/tool keywords"],
+  "mustHaves": ["top 5-8 JD must-haves"],
+  "roleFamily": "short label e.g. FP&A Analyst",
+  "companyName": "hiring company short name or empty string",
   "summary": "1-2 sentence overview of edits",
   "coverLetter": "2-3 sentences: why this company + how I will contribute, usable in an application form"
 }

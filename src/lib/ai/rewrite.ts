@@ -20,6 +20,9 @@ const ChangeSchema = z.object({
 const RewriteSchema = z.object({
   changes: z.array(ChangeSchema).default([]),
   atsKeywords: z.array(z.string()).default([]),
+  mustHaves: z.array(z.string()).default([]),
+  roleFamily: z.string().default("Finance"),
+  companyName: z.string().default(""),
   summary: z.string().default(""),
   coverLetter: z.string().default(""),
 });
@@ -28,6 +31,9 @@ export type RewriteResult = {
   changes: ResumeChange[];
   rejected: ResumeChange[];
   atsKeywords: string[];
+  mustHaves: string[];
+  roleFamily: string;
+  companyName: string;
   summary: string;
   coverLetter: string;
 };
@@ -48,8 +54,14 @@ async function callRewrite(
   const anthropic = getAnthropic();
   const response = await anthropic.messages.create({
     model: CLAUDE_MODEL,
-    max_tokens: 8192,
-    system: SYSTEM_REWRITE,
+    max_tokens: 4096,
+    system: [
+      {
+        type: "text",
+        text: SYSTEM_REWRITE,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
     messages: [
       {
         role: "user",
@@ -112,6 +124,7 @@ export async function rewriteResume(input: {
   let changes = alignWithBlocks(first.changes, input.blocks);
   let { valid, rejected } = filterValidChanges(changes, LAYOUT_OPTS);
 
+  // Only retry rejected lines (keeps second call small/cheap)
   if (rejected.length > 0) {
     const hint = rejected
       .map((r) => {
@@ -143,6 +156,9 @@ export async function rewriteResume(input: {
     changes: valid,
     rejected,
     atsKeywords: first.atsKeywords,
+    mustHaves: first.mustHaves,
+    roleFamily: first.roleFamily,
+    companyName: first.companyName.trim(),
     summary: first.summary,
     coverLetter: first.coverLetter.trim(),
   };

@@ -99,14 +99,7 @@ export function TailorWorkspace() {
       markDone("parse");
 
       setActiveStage("analyze");
-      const resumeText = blocks.map((b) => b.text).join("\n");
-      const analyzeRes = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobDescription: jd, resumeText }),
-      });
-      const analyzeJson = await analyzeRes.json();
-      if (!analyzeRes.ok) throw new Error(analyzeJson.error || "Analyze failed");
+      // Keywords / company / must-haves come from the single rewrite call (cheaper)
       markDone("analyze");
 
       setActiveStage("rewrite");
@@ -124,7 +117,7 @@ export function TailorWorkspace() {
       markDone("rewrite");
 
       setActiveStage("check");
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 300));
       markDone("check");
       setActiveStage(null);
 
@@ -133,15 +126,13 @@ export function TailorWorkspace() {
       );
       const keywords =
         (rewriteJson.coverage?.keywords as string[]) ||
-        (analyzeJson.keywords as string[]) ||
+        (rewriteJson.atsKeywords as string[]) ||
         [];
-      const before =
-        (rewriteJson.coverage?.before as Coverage) ||
-        (analyzeJson.before as Coverage) || {
-          covered: [],
-          missing: keywords,
-          score: 0,
-        };
+      const before = (rewriteJson.coverage?.before as Coverage) || {
+        covered: [],
+        missing: keywords,
+        score: 0,
+      };
       const after = (rewriteJson.coverage?.after as Coverage) || before;
 
       setResult({
@@ -152,9 +143,9 @@ export function TailorWorkspace() {
         keywords,
         before,
         after,
-        roleFamily: analyzeJson.roleFamily,
-        mustHaves: analyzeJson.mustHaves,
-        companyName: analyzeJson.companyName || "",
+        roleFamily: rewriteJson.roleFamily,
+        mustHaves: rewriteJson.mustHaves,
+        companyName: rewriteJson.companyName || "",
       });
       setSelected(new Set(changes.map((c) => c.id)));
     } catch (e) {

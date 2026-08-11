@@ -15,7 +15,7 @@ Tailor Riya’s Word resume to a job description with Claude — **format preser
 
 ## Stack
 
-Next.js (App Router) · TypeScript · Tailwind · Anthropic Claude Sonnet 5 · JSZip (in-place DOCX edits)
+Next.js (App Router) · TypeScript · Tailwind · Anthropic Claude Haiku 4.5 · JSZip (in-place DOCX edits)
 
 ## Local setup
 
