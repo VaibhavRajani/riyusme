@@ -39,7 +39,7 @@ export function TailorWorkspace() {
   const [doneStages, setDoneStages] = useState<StageId[]>([]);
   const [result, setResult] = useState<TailorState | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [downloading, setDownloading] = useState(false);
+  const [downloading, setDownloading] = useState<"docx" | "pdf" | null>(null);
 
   const restoreDefault = useCallback(async () => {
     setLoadingDefault(true);
@@ -176,7 +176,7 @@ export function TailorWorkspace() {
     ).length;
   }, [result, selected]);
 
-  const download = async () => {
+  const download = async (format: "docx" | "pdf") => {
     if (!file || selectedChanges.length === 0) return;
     if (unsafeSelected > 0) {
       setError(
@@ -184,12 +184,13 @@ export function TailorWorkspace() {
       );
       return;
     }
-    setDownloading(true);
+    setDownloading(format);
     setError(null);
     try {
       const form = new FormData();
       form.append("file", file);
       form.append("changes", JSON.stringify(selectedChanges));
+      form.append("format", format);
       const res = await fetch("/api/export", { method: "POST", body: form });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -199,13 +200,14 @@ export function TailorWorkspace() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = file.name.replace(/\.docx$/i, "") + "-tailored.docx";
+      const base = file.name.replace(/\.docx$/i, "");
+      a.download = `${base}-tailored.${format === "pdf" ? "pdf" : "docx"}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Download failed");
     } finally {
-      setDownloading(false);
+      setDownloading(null);
     }
   };
 
@@ -350,20 +352,30 @@ export function TailorWorkspace() {
             />
           )}
 
-          <div className="flex flex-wrap items-center gap-4 border-t border-[var(--line)] pt-5">
+          <div className="flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-5">
             <button
               type="button"
-              disabled={selectedChanges.length === 0 || downloading}
-              onClick={download}
+              disabled={selectedChanges.length === 0 || downloading !== null}
+              onClick={() => void download("docx")}
               className="btn-accent"
             >
-              {downloading
-                ? "Building file…"
-                : `Download tailored .docx (${selectedChanges.length})`}
+              {downloading === "docx"
+                ? "Building Word…"
+                : `Download Word (${selectedChanges.length})`}
             </button>
-            <p className="text-sm text-[var(--ink-muted)]">
-              Download only applies one-page-safe lines (same or fewer
-              characters than the original).
+            <button
+              type="button"
+              disabled={selectedChanges.length === 0 || downloading !== null}
+              onClick={() => void download("pdf")}
+              className="btn-primary"
+            >
+              {downloading === "pdf"
+                ? "Building PDF…"
+                : `Download PDF (${selectedChanges.length})`}
+            </button>
+            <p className="w-full text-sm text-[var(--ink-muted)] sm:w-auto">
+              PDF keeps Word layout (fonts, spacing, one page). Only one-page-safe
+              lines are applied.
             </p>
           </div>
         </div>

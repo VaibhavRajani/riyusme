@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyChangesToDocx } from "@/lib/docx/apply";
+import { docxToPdf } from "@/lib/docx/toPdf";
 import { isLayoutSafe } from "@/lib/docx/wordCount";
 import type { ResumeChange } from "@/lib/docx/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const file = form.get("file");
     const changesRaw = form.get("changes");
+    const formatRaw = form.get("format");
+    const format =
+      typeof formatRaw === "string" && formatRaw.toLowerCase() === "pdf"
+        ? "pdf"
+        : "docx";
 
     if (!file || !(file instanceof File)) {
       return NextResponse.json(
@@ -45,21 +51,31 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const out = await applyChangesToDocx(buffer, safe);
-
+    const tailored = await applyChangesToDocx(buffer, safe);
     const base = file.name.replace(/\.docx$/i, "") || "resume";
-    const filename = `${base}-tailored.docx`;
 
-    return new NextResponse(Buffer.from(out), {
+    if (format === "pdf") {
+      const pdf = await docxToPdf(Buffer.from(tailored));
+      return new NextResponse(pdf, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${base}-tailored.pdf"`,
+        },
+      });
+    }
+
+    return new NextResponse(Buffer.from(tailored), {
       status: 200,
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": `attachment; filename="${base}-tailored.docx"`,
       },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Export failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes("CONVERTAPI_SECRET") ? 503 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
