@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "src/app/api/rewrite/route.ts": {
+      "maxDuration": 120
+    },
+    "src/app/api/analyze/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
