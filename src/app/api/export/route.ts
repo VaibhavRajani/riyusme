@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     if (format === "pdf") {
       const pdf = await docxToPdf(Buffer.from(tailored));
-      return new NextResponse(pdf, {
+      return new NextResponse(new Uint8Array(pdf), {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return new NextResponse(Buffer.from(tailored), {
+    return new NextResponse(new Uint8Array(tailored), {
       status: 200,
       headers: {
         "Content-Type":
