@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ResumeDropzone } from "@/components/ResumeDropzone";
 import { ProgressStages, type StageId } from "@/components/ProgressStages";
 import { DiffReview } from "@/components/DiffReview";
 import { AtsPanel } from "@/components/AtsPanel";
 import { CoverLetterPanel } from "@/components/CoverLetterPanel";
 import { isLayoutSafe } from "@/lib/docx/wordCount";
+import {
+  DEFAULT_RESUME_FILENAME,
+  loadDefaultResumeFile,
+} from "@/lib/defaultResume";
 import type { ResumeBlock, ResumeChange } from "@/lib/docx/types";
 
 type Coverage = { covered: string[]; missing: string[]; score: number };
@@ -25,6 +29,8 @@ type TailorState = {
 
 export function TailorWorkspace() {
   const [file, setFile] = useState<File | null>(null);
+  const [isDefault, setIsDefault] = useState(false);
+  const [loadingDefault, setLoadingDefault] = useState(true);
   const [jd, setJd] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,6 +40,35 @@ export function TailorWorkspace() {
   const [result, setResult] = useState<TailorState | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
+
+  const restoreDefault = useCallback(async () => {
+    setLoadingDefault(true);
+    const def = await loadDefaultResumeFile();
+    if (def) {
+      setFile(def);
+      setIsDefault(true);
+    } else {
+      setFile(null);
+      setIsDefault(false);
+      setError(
+        `Default resume missing. Add ${DEFAULT_RESUME_FILENAME} under public/defaults/ (must be .docx).`
+      );
+    }
+    setLoadingDefault(false);
+  }, []);
+
+  useEffect(() => {
+    void restoreDefault();
+  }, [restoreDefault]);
+
+  const onFile = useCallback((f: File | null) => {
+    if (!f) {
+      void restoreDefault();
+      return;
+    }
+    setFile(f);
+    setIsDefault(false);
+  }, [restoreDefault]);
 
   const canRun = Boolean(file && jd.trim().length >= 40 && !busy);
 
@@ -177,7 +212,14 @@ export function TailorWorkspace() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3">
       <div className="surface flex flex-1 flex-col gap-3 p-3 sm:p-4">
-        <ResumeDropzone file={file} onFile={setFile} disabled={busy} />
+        <ResumeDropzone
+          file={file}
+          isDefault={isDefault}
+          loadingDefault={loadingDefault}
+          onFile={onFile}
+          onRestoreDefault={() => void restoreDefault()}
+          disabled={busy || loadingDefault}
+        />
 
         <div className="grid min-h-0 flex-1 gap-3 md:grid-cols-2">
           <div className="flex min-h-0 flex-col gap-1.5">
@@ -239,9 +281,9 @@ export function TailorWorkspace() {
               Need a fuller job description
             </span>
           )}
-          {!file && (
+          {!file && !loadingDefault && (
             <span className="text-sm text-[var(--ink-muted)]">
-              Upload a .docx to begin
+              Add default .docx or upload one to begin
             </span>
           )}
           <span className="hidden text-xs text-[var(--ink-muted)] sm:inline">

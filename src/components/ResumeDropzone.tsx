@@ -4,18 +4,35 @@ import { useCallback, useRef, useState } from "react";
 
 type Props = {
   file: File | null;
+  isDefault: boolean;
+  loadingDefault?: boolean;
   onFile: (file: File | null) => void;
+  onRestoreDefault?: () => void;
   disabled?: boolean;
 };
 
-export function ResumeDropzone({ file, onFile, disabled }: Props) {
+export function ResumeDropzone({
+  file,
+  isDefault,
+  loadingDefault,
+  onFile,
+  onRestoreDefault,
+  disabled,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
   const accept = useCallback(
     (f: File | undefined) => {
       if (!f) return;
-      if (!f.name.toLowerCase().endsWith(".docx")) {
+      const name = f.name.toLowerCase();
+      if (name.endsWith(".doc") && !name.endsWith(".docx")) {
+        alert(
+          "Please use a .docx file (Word → Save As → Word Document). Old .doc files are not supported."
+        );
+        return;
+      }
+      if (!name.endsWith(".docx")) {
         alert("Please upload a Word document (.docx)");
         return;
       }
@@ -62,23 +79,33 @@ export function ResumeDropzone({ file, onFile, disabled }: Props) {
       />
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-[var(--ink)]">
-          {file ? file.name : "Drop your resume (.docx) or click to browse"}
+          {loadingDefault
+            ? "Loading default resume…"
+            : file
+              ? file.name
+              : "Drop a .docx or click to browse"}
         </p>
         <p className="text-xs text-[var(--ink-muted)]">
-          {file ? "Format preserved · click to replace" : "Word document only"}
+          {loadingDefault
+            ? "Using Riya’s baseline resume"
+            : file && isDefault
+              ? "Default resume loaded · click to replace with another .docx"
+              : file
+                ? "Custom upload · format preserved"
+                : "Word .docx only (not .doc)"}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {file && (
+        {file && !isDefault && onRestoreDefault && (
           <button
             type="button"
             className="text-xs text-[var(--accent)] underline-offset-2 hover:underline"
             onClick={(e) => {
               e.stopPropagation();
-              onFile(null);
+              onRestoreDefault();
             }}
           >
-            Clear
+            Use default
           </button>
         )}
         <span className="border border-[var(--line)] bg-[var(--paper-raised)] px-3 py-1.5 text-xs font-medium text-[var(--ink)]">
