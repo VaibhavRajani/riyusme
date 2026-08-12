@@ -29,7 +29,7 @@ HARD RULES
 11. Also extract ATS metadata from the JD in the same response (atsKeywords, mustHaves, roleFamily, companyName) — do not invent a company if the JD never names one.
 
 OUTPUT
-Return ONLY valid JSON matching the schema. No markdown fences.`;
+Call the submit_resume_tailor_result tool with your full result. Do not write free-form JSON in the message text.`;
 
 export function buildRewriteUserPrompt(input: {
   jobDescription: string;

@@ -38,12 +38,45 @@ export type RewriteResult = {
   coverLetter: string;
 };
 
-function extractJson(text: string): unknown {
-  const trimmed = text.trim();
-  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = fence ? fence[1].trim() : trimmed;
-  return JSON.parse(raw);
-}
+/** Forced tool keeps Claude from emitting broken free-form JSON. */
+const REWRITE_TOOL = {
+  name: "submit_resume_tailor_result",
+  description:
+    "Submit the tailored resume edits, ATS metadata, and application blurb.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      changes: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            original: { type: "string" },
+            rewritten: { type: "string" },
+            reason: { type: "string" },
+          },
+          required: ["id", "original", "rewritten"],
+        },
+      },
+      atsKeywords: { type: "array", items: { type: "string" } },
+      mustHaves: { type: "array", items: { type: "string" } },
+      roleFamily: { type: "string" },
+      companyName: { type: "string" },
+      summary: { type: "string" },
+      coverLetter: { type: "string" },
+    },
+    required: [
+      "changes",
+      "atsKeywords",
+      "mustHaves",
+      "roleFamily",
+      "companyName",
+      "summary",
+      "coverLetter",
+    ],
+  },
+};
 
 async function callRewrite(
   jobDescription: string,
@@ -54,7 +87,7 @@ async function callRewrite(
   const anthropic = getAnthropic();
   const response = await anthropic.messages.create({
     model: CLAUDE_MODEL,
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: [
       {
         type: "text",
@@ -62,6 +95,8 @@ async function callRewrite(
         cache_control: { type: "ephemeral" },
       },
     ],
+    tools: [REWRITE_TOOL],
+    tool_choice: { type: "tool", name: "submit_resume_tailor_result" },
     messages: [
       {
         role: "user",
@@ -75,14 +110,14 @@ async function callRewrite(
     ],
   });
 
-  const textBlock = response.content.find((c) => c.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No rewrite response from Claude");
+  const toolBlock = response.content.find((c) => c.type === "tool_use");
+  if (!toolBlock || toolBlock.type !== "tool_use") {
+    throw new Error("No structured rewrite result from Claude");
   }
 
-  const parsed = RewriteSchema.safeParse(extractJson(textBlock.text));
+  const parsed = RewriteSchema.safeParse(toolBlock.input);
   if (!parsed.success) {
-    throw new Error("Failed to parse rewrite JSON from Claude");
+    throw new Error("Failed to validate rewrite result from Claude");
   }
   return parsed.data;
 }
@@ -124,7 +159,6 @@ export async function rewriteResume(input: {
   let changes = alignWithBlocks(first.changes, input.blocks);
   let { valid, rejected } = filterValidChanges(changes, LAYOUT_OPTS);
 
-  // Only retry rejected lines (keeps second call small/cheap)
   if (rejected.length > 0) {
     const hint = rejected
       .map((r) => {
